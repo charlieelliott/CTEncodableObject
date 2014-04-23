@@ -121,14 +121,6 @@
     return encodableCopy;
 }
 
-# pragma mark - Description
-
-- (NSString *)debugDescription
-{
-    NSDictionary *dictionaryRep = [NSDictionary dictionaryWithEncodableObject:self];
-    return [[super debugDescription] stringByAppendingString:[dictionaryRep debugDescription]];
-}
-
 # pragma mark - QuickLook
 
 - (id)debugQuickLookObject
