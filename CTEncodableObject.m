@@ -7,6 +7,7 @@
 
 #import "CTEncodableObject.h"
 @import ObjectiveC;
+@import QuickLook;
 
 #define ct_PropertyAttributeValueReadonly "R"
 #define ct_PropertyAttributeValueWeak "W"
@@ -88,8 +89,11 @@
         NSSet *properties = [[self class] encodableKeys];
         for(NSString *key in properties)
         {
-            id value = [aDecoder decodeObjectForKey:key];
-            [self setValue:value forKey:key];
+            if([aDecoder containsValueForKey:key])
+            {
+                id value = [aDecoder decodeObjectForKey:key];
+                [self setValue:value forKey:key];
+            }
         }
     }
     return self;
@@ -115,6 +119,14 @@
     }
     
     return encodableCopy;
+}
+
+# pragma mark - Description
+
+- (NSString *)debugDescription
+{
+    NSDictionary *dictionaryRep = [NSDictionary dictionaryWithEncodableObject:self];
+    return [[super debugDescription] stringByAppendingString:[dictionaryRep debugDescription]];
 }
 
 # pragma mark - QuickLook
