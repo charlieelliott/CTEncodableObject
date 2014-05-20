@@ -75,7 +75,12 @@
 
 - (NSString *)debugDescription
 {
-    NSDictionary *dictionaryRep = [NSDictionary dictionaryWithEncodableObject:self];
+    return [self recursiveDescriptionWithDepth:NSIntegerMax];
+}
+
+- (NSString *)recursiveDescriptionWithDepth:(NSInteger)depth
+{
+    NSDictionary *dictionaryRep = [NSDictionary dictionaryWithEncodableObject:self recurseDepth:depth];
     return [[super debugDescription] stringByAppendingString:[dictionaryRep debugDescription]];
 }
 
@@ -135,12 +140,19 @@
 
 + (NSDictionary *)dictionaryWithEncodableObject:(CTEncodableObject *)object
 {
+    return [NSDictionary dictionaryWithEncodableObject:object recurseDepth:NSIntegerMax];
+}
+
++ (NSDictionary *)dictionaryWithEncodableObject:(CTEncodableObject *)object recurseDepth:(NSInteger)depth
+{
     NSMutableDictionary *temp = [NSMutableDictionary dictionary];
     NSSet *propertyNames = [[object class] encodableKeys];
+    
+    NSInteger childDepth = depth;
     for(NSString *key in propertyNames)
     {
         id value = [object valueForKey:key];
-        if([value isKindOfClass:[CTEncodableObject class]])
+        if([value isKindOfClass:[CTEncodableObject class]] && --childDepth >= 0)
             value = [NSDictionary dictionaryWithEncodableObject:value];
         [temp setValue:value forKey:key];
     }
