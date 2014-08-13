@@ -9,6 +9,10 @@
 @import ObjectiveC;
 @import QuickLook;
 
+#ifdef DEBUG
+#define CCEncodableObjectLogKeys 0
+#endif
+
 #define ct_PropertyAttributeValueReadonly "R"
 #define ct_PropertyAttributeValueWeak "W"
 
@@ -39,31 +43,42 @@
     return temp;
 }
 
-+ (NSMutableSet *)encodableKeys
++ (NSSet *)encodableKeys
 {
-    NSMutableSet *temp = [NSMutableSet set];
-    Class superClass = class_getSuperclass(self);
-    Method method = class_getClassMethod(superClass, _cmd);
-    if(method != NULL)
-        [temp unionSet:[superClass encodableKeys]]; //recursively get superclass properties
-    
-    unsigned int count = 0;
-    objc_property_t *properties = class_copyPropertyList(self, &count);
-    for(int i = 0; i < count; i++)
+    NSSet *_encodableKeys = objc_getAssociatedObject(self, _cmd);
+    if(!_encodableKeys)
     {
-        objc_property_t prop = properties[i];
-        char *readonly = property_copyAttributeValue(prop, ct_PropertyAttributeValueReadonly);
-        char *weak = property_copyAttributeValue(prop, ct_PropertyAttributeValueWeak);
-        if(!readonly && !weak)
-            [temp addObject:@(property_getName(prop))];
-        free(readonly);
-        free(weak);
+        NSMutableSet *temp = [NSMutableSet set];
+        Class superClass = class_getSuperclass(self);
+        Method method = class_getClassMethod(superClass, _cmd);
+        if(method != NULL)
+            [temp unionSet:[superClass encodableKeys]]; //recursively get superclass properties
+        
+        unsigned int count = 0;
+        objc_property_t *properties = class_copyPropertyList(self, &count);
+        for(int i = 0; i < count; i++)
+        {
+            objc_property_t prop = properties[i];
+            char *readonly = property_copyAttributeValue(prop, ct_PropertyAttributeValueReadonly);
+            char *weak = property_copyAttributeValue(prop, ct_PropertyAttributeValueWeak);
+            if(!readonly && !weak)
+                [temp addObject:@(property_getName(prop))];
+            free(readonly);
+            free(weak);
+        }
+        free(properties);
+        
+        [temp minusSet:[self unencodableKeys]];
+        
+        _encodableKeys = [temp copy];
+        objc_setAssociatedObject(self, _cmd, _encodableKeys, OBJC_ASSOCIATION_RETAIN); //cache the keys on the class
+        
+#if defined(CCEncodableObjectLogKeys) && CCEncodableObjectLogKeys
+        NSLog(@"%@ %@: %@", NSStringFromClass(self), NSStringFromSelector(_cmd), _encodableKeys);
+#endif
     }
-    free(properties);
     
-    [temp minusSet:[self unencodableKeys]];
-    
-    return temp;
+    return _encodableKeys;
 }
 
 + (NSSet *)unencodableKeys
